@@ -69,6 +69,10 @@
     // setup buttons
     [AdobeImageEditorCustomization setLeftNavigationBarButtonTitle:[self getLeftButtonLabel:[command.arguments objectAtIndex:16]]];
     [AdobeImageEditorCustomization setRightNavigationBarButtonTitle:[self getRightButtonLabel:[command.arguments objectAtIndex:17]]];
+    
+    BOOL shouldSavePhoto = [[command.arguments objectAtIndex:18] boolValue];
+    
+    [self setupHighResContextForPhotoEditor:self.viewController withImage:image withBool:shouldSavePhoto];
 
 	[self.viewController presentViewController:editorController animated:YES completion:nil];
 }
@@ -92,6 +96,42 @@
 
     [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
     [self.viewController dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void) setupHighResContextForPhotoEditor:(AFPhotoEditorController *)photoEditor withImage:(UIImage *)highResImage withBool:(BOOL *)savePhoto
+{
+    NSMutableArray * sessions = nil;
+    
+    // Capture a reference to the editor's session, which internally tracks user actions on a photo.
+    __block AFPhotoEditorSession *session = [photoEditor session];
+    
+    // Add the session to our sessions array. We need to retain the session until all contexts we create from it are finished rendering.
+    [sessions addObject:session];
+    
+    // Create a context from the session with the high res image.
+    AFPhotoEditorContext *context = [session createContextWithImage:highResImage];
+    
+    // Call render on the context. The render will asynchronously apply all changes made in the session (and therefore editor)
+    // to the context's image. It will not complete until some point after the session closes (i.e. the editor hits done or
+    // cancel in the editor). When rendering does complete, the completion block will be called with the result image if changes
+    // were made to it, or `nil` if no changes were made. In this case, we write the image to the user's photo album, and release
+    // our reference to the session.
+    [context render:^(UIImage *result) {
+        
+        if (result) {
+            if (savePhoto){
+                NSLog(@"Save");
+                UIImageWriteToSavedPhotosAlbum(result, nil, nil, NULL);
+            }
+            else {
+                NSLog(@"No save");
+            }
+        }
+        
+        session = nil;
+        
+    }];
+    
 }
 
 - (void)photoEditorCanceled:(AdobeUXImageEditorViewController *)editor
