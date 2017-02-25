@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<plugin xmlns="http://cordova.apache.org/ns/plugins/1.0" id="phonegap-plugin-csdk-image-editor" version="1.0.0">
+<plugin xmlns="http://cordova.apache.org/ns/plugins/1.0" id="phonegap-plugin-csdk-image-editor" version="1.0.1">
   <name>phonegap-plugin-csdk-image-editor</name>
   <js-module src="www/ImageEditor.js" name="ImageEditor">
     <clobbers target="CSDKImageEditor"/>
