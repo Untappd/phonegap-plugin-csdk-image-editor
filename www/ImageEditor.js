@@ -63,6 +63,7 @@ var CSDKImageEditor = {
         var cropInvert = getValue(options.crop.invert, true);
         var cropOriginal = getValue(options.crop.original, true);
         var customArray = getValue(options.crop.customArray, []);
+        var savedAlteredPhotos = getValue(options.savedAlteredPhotos, false);
 
         var orientations = getValue(options.orientations, [CSDKImageEditor.OrientationType.PORTRAIT]);
 
@@ -75,7 +76,7 @@ var CSDKImageEditor = {
 
         var args = [imageUrl, outputType, tools, quality, confirmExit, outputSize,
             saveWithNoChanges, vibrate, color, previewSize, outputFile, cropCustom,
-            cropInvert, cropOriginal, customArray, orientations, leftButton, rightButton
+            cropInvert, cropOriginal, customArray, orientations, leftButton, rightButton, savedAlteredPhotos
         ];
 
         exec(successCallback, errorCallback, 'CSDKImageEditor', 'edit', args);
