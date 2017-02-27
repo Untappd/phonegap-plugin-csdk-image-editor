@@ -21,6 +21,7 @@ package com.adobe.phonegap.csdk;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,18 +35,40 @@ import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import java.io.File;
 import java.util.ArrayList;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 
 import com.adobe.creativesdk.aviary.AdobeImageIntent;
 import com.adobe.creativesdk.aviary.internal.filters.ToolLoaderFactory;
 import com.adobe.creativesdk.aviary.internal.headless.utils.MegaPixels;
+
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Environment;
+import android.util.Log;
 
 /**
 * This class exposes methods in Cordova that can be called from JavaScript.
 */
 public class ImageEditor extends CordovaPlugin {
     private static final String LOG_TAG = "CreativeSDK_ImageEditor";
+
+    // savePhoto
+    public static Boolean shouldSavePhoto = false;
+    private final String WRITE_EXTERNAL_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+    public static final int WRITE_PERM_REQUEST_CODE = 1;
+
+    private String filePath;
 
     // Output types
     private static final int JPEG = 0;                  // Take a picture of type JPEG
@@ -123,6 +146,8 @@ public class ImageEditor extends CordovaPlugin {
                 builder.withOutput(fp);
             }
 
+            this.shouldSavePhoto = args.getBoolean(18);
+
             Intent imageEditorIntent = builder.build();
 
             this.cordova.startActivityForResult((CordovaPlugin) this, imageEditorIntent, 1);
@@ -149,6 +174,15 @@ public class ImageEditor extends CordovaPlugin {
             switch (requestCode) {
                 case 1:
                     Uri editedImageUri = intent.getParcelableExtra(AdobeImageIntent.EXTRA_OUTPUT_URI);
+
+                    if (this.shouldSavePhoto)  {
+                        try {
+                            this.saveImageToGallery(editedImageUri.toString());
+                        } catch (JSONException ex) {
+                            Log.e(LOG_TAG, ex.getMessage());
+                        }
+                    }
+
                     this.callbackContext.success(editedImageUri.toString());
 
                     break;
@@ -250,5 +284,132 @@ public class ImageEditor extends CordovaPlugin {
             }
         }
         return tools.toArray(new ToolLoaderFactory.Tools[tools.size()]);
+    }
+
+    private void saveImageToGallery(String imageUri) throws JSONException {
+        this.filePath = imageUri;
+        Log.d("SaveImage", "SaveImage in filePath: " + filePath);
+
+        if (PermissionHelper.hasPermission(this, WRITE_EXTERNAL_STORAGE)) {
+            Log.d("SaveImage", "Permissions already granted, or Android version is lower than 6");
+            performImageSave();
+        } else {
+            Log.d("SaveImage", "Requesting permissions for WRITE_EXTERNAL_STORAGE");
+            PermissionHelper.requestPermission(this, WRITE_PERM_REQUEST_CODE, WRITE_EXTERNAL_STORAGE);
+        }
+    }
+
+    /**
+     * Copy a file to a destination folder
+     *
+     * @param srcFile       Source file to be stored in destination folder
+     * @param dstFolder     Destination folder where to store file
+     * @return File         The newly generated file in destination folder
+     */
+    private File copyFile(File srcFile, File dstFolder) {
+        // if destination folder does not exist, create it
+        if (!dstFolder.exists()) {
+            if (!dstFolder.mkdir()) {
+                throw new RuntimeException("Destination folder does not exist and cannot be created.");
+            }
+        }
+
+        // Generate image file name using current date and time
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").format(new Date());
+        File newFile = new File(dstFolder.getPath() + File.separator + "IMG_" + timeStamp + ".jpg");
+
+        // Read and write image files
+        FileChannel inChannel = null;
+        FileChannel outChannel = null;
+
+        try {
+            inChannel = new FileInputStream(srcFile).getChannel();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Source file not found: " + srcFile + ", error: " + e.getMessage());
+        }
+        try {
+            outChannel = new FileOutputStream(newFile).getChannel();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Copy file not found: " + newFile + ", error: " + e.getMessage());
+        }
+
+        try {
+            inChannel.transferTo(0, inChannel.size(), outChannel);
+        } catch (IOException e) {
+            throw new RuntimeException("Error transfering file, error: " + e.getMessage());
+        } finally {
+            if (inChannel != null) {
+                try {
+                    inChannel.close();
+                } catch (IOException e) {
+                    Log.d("SaveImage", "Error closing input file channel: " + e.getMessage());
+                    // does not harm, do nothing
+                }
+            }
+            if (outChannel != null) {
+                try {
+                    outChannel.close();
+                } catch (IOException e) {
+                    Log.d("SaveImage", "Error closing output file channel: " + e.getMessage());
+                    // does not harm, do nothing
+                }
+            }
+        }
+
+        return newFile;
+    }
+
+    private void performImageSave() throws JSONException {
+        // create file from passed path
+        File srcFile = new File(filePath);
+
+        // destination gallery folder - external storage
+        File dstGalleryFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+
+        Log.d("SaveImage", "SaveImage dstGalleryFolder: " + dstGalleryFolder);
+
+        try {
+            // Create export file in destination folder (gallery)
+            File expFile = copyFile(srcFile, dstGalleryFolder);
+
+            // Update image gallery
+            scanPhoto(expFile);
+
+            callbackContext.success(expFile.toString());
+        } catch (RuntimeException e) {
+            callbackContext.error("RuntimeException occurred: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Invoke the system's media scanner to add your photo to the Media Provider's database,
+     * making it available in the Android Gallery application and to other apps.
+     *
+     * @param imageFile The image file to be scanned by the media scanner
+     */
+    private void scanPhoto(File imageFile) {
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        Uri contentUri = Uri.fromFile(imageFile);
+        mediaScanIntent.setData(contentUri);
+        cordova.getActivity().sendBroadcast(mediaScanIntent);
+    }
+
+    /**
+     * Callback from PermissionHelper.requestPermission method
+     */
+    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+        for (int r : grantResults) {
+            if (r == PackageManager.PERMISSION_DENIED) {
+                Log.d("SaveImage", "Permission not granted by the user");
+                return;
+            }
+        }
+
+        switch (requestCode) {
+            case WRITE_PERM_REQUEST_CODE:
+                Log.d("SaveImage", "User granted the permission for WRITE_EXTERNAL_STORAGE");
+                performImageSave();
+                break;
+        }
     }
 }
