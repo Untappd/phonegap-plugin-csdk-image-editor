@@ -34,6 +34,7 @@ import android.graphics.Bitmap.CompressFormat;
 import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
+import android.os.Bundle;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -175,11 +176,15 @@ public class ImageEditor extends CordovaPlugin {
                 case 1:
                     Uri editedImageUri = intent.getParcelableExtra(AdobeImageIntent.EXTRA_OUTPUT_URI);
 
-                    if (this.shouldSavePhoto)  {
-                        try {
-                            this.saveImageToGallery(editedImageUri.toString());
-                        } catch (JSONException ex) {
-                            Log.e(LOG_TAG, ex.getMessage());
+                    // check if the image has actually changed
+                    Bundle extra = intent.getExtras();
+                    if (extra != null) {
+                        if (this.shouldSavePhoto)  {
+                            try {
+                                this.saveImageToGallery(editedImageUri.toString());
+                            } catch (JSONException ex) {
+                                Log.e(LOG_TAG, ex.getMessage());
+                            }
                         }
                     }
 
