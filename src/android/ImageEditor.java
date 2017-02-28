@@ -188,6 +188,8 @@ public class ImageEditor extends CordovaPlugin {
                         }
                     }
 
+                    Log.d(LOG_TAG, editedImageUri.toString());
+
                     this.callbackContext.success(editedImageUri.toString());
 
                     break;
@@ -379,10 +381,8 @@ public class ImageEditor extends CordovaPlugin {
 
             // Update image gallery
             scanPhoto(expFile);
-
-            callbackContext.success(expFile.toString());
         } catch (RuntimeException e) {
-            callbackContext.error("RuntimeException occurred: " + e.getMessage());
+            Log.d("SaveImage", e.getMessage());
         }
     }
 
