@@ -119,15 +119,15 @@ public class ImageEditor extends CordovaPlugin {
             Uri imageUri = Uri.parse(imageStr);
 
             AdobeImageIntent.Builder builder =
-                new AdobeImageIntent.Builder(this.cordova.getActivity().getApplicationContext())
-                    .setData(imageUri);
+                    new AdobeImageIntent.Builder(this.cordova.getActivity().getApplicationContext())
+                            .setData(imageUri);
 
             // setup options
             setOutputType(builder, args.getInt(1));
             setToolsArray(builder, args.getJSONArray(2));
             builder.withOutputQuality(args.getInt(3));
             builder.withNoExitConfirmation(args.getBoolean(4));
-            builder.withOutputSize(MegaPixels.valueOf("Mp"+args.getString(5)));
+            builder.withOutputSize(MegaPixels.valueOf("Mp" + args.getString(5)));
             builder.saveWithNoChanges(args.getBoolean(6));
             builder.withVibrationEnabled(args.getBoolean(7));
 
@@ -156,6 +156,9 @@ public class ImageEditor extends CordovaPlugin {
             PluginResult r = new PluginResult(PluginResult.Status.NO_RESULT);
             r.setKeepCallback(true);
             callbackContext.sendPluginResult(r);
+        } else if (action.equals("scanMedia")) {
+            this.updateMedia();
+            callbackContext.success("true");
         } else {
             return false;
         }
@@ -171,6 +174,7 @@ public class ImageEditor extends CordovaPlugin {
      * @param intent            An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
      */
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+
         if (resultCode == Activity.RESULT_OK) {
             switch (requestCode) {
                 case 1:
@@ -188,7 +192,7 @@ public class ImageEditor extends CordovaPlugin {
                         }
                     }
 
-                    Log.d(LOG_TAG, editedImageUri.toString());
+                    Log.e(LOG_TAG, editedImageUri.toString());
 
                     this.callbackContext.success(editedImageUri.toString());
 
@@ -396,6 +400,16 @@ public class ImageEditor extends CordovaPlugin {
         Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
         Uri contentUri = Uri.fromFile(imageFile);
         mediaScanIntent.setData(contentUri);
+        cordova.getActivity().sendBroadcast(mediaScanIntent);
+    }
+
+    /**
+     * Invoke the system's media scanner to add your photo to the Media Provider's database,
+     * making it available in the Android Gallery application and to other apps.
+     *
+     */
+    private void updateMedia() {
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
         cordova.getActivity().sendBroadcast(mediaScanIntent);
     }
 
