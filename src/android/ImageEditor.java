@@ -156,9 +156,15 @@ public class ImageEditor extends CordovaPlugin {
             PluginResult r = new PluginResult(PluginResult.Status.NO_RESULT);
             r.setKeepCallback(true);
             callbackContext.sendPluginResult(r);
-        } else if (action.equals("scanMedia")) {
-            this.updateMedia();
-            callbackContext.success("true");
+        } else if (action.equals("deleteMedia")) {
+            String imageStr = args.getString(0);
+            Uri imageUri = Uri.parse(imageStr);
+            File imageFile = new File(imageUri.getPath());
+            this.deleteMedia(imageFile);
+            
+            PluginResult r = new PluginResult(PluginResult.Status.NO_RESULT);
+            r.setKeepCallback(true);
+            callbackContext.sendPluginResult(r);
         } else {
             return false;
         }
@@ -408,9 +414,16 @@ public class ImageEditor extends CordovaPlugin {
      * making it available in the Android Gallery application and to other apps.
      *
      */
-    private void updateMedia() {
-        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        cordova.getActivity().sendBroadcast(mediaScanIntent);
+    private void deleteMedia(File filePath) {
+        try {
+            cordova.getActivity().getContentResolver().delete(Uri.fromFile(filePath), null, null);
+            Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+            cordova.getActivity().sendBroadcast(mediaScanIntent);
+            this.callbackContext.success("true");
+        } catch (Exception ex) {
+            this.callbackContext.error(ex.getMessage());
+        }
+
     }
 
     /**
