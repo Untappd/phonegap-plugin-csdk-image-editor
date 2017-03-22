@@ -31,8 +31,8 @@ var argscheck = cordova.require('cordova/argscheck'),
     @global
 */
 var CSDKImageEditor = {
-    scanMedia: function(successCallback, errorCallback) {
-        exec(successCallback, errorCallback, 'CSDKImageEditor', 'scanMedia', []);
+    deleteMedia: function(successCallback, errorCallback, imageUrl) {
+        exec(successCallback, errorCallback, 'CSDKImageEditor', 'deleteMedia', [imageUrl]);
     },
     /**
      * @description Launches the Image Editor.
