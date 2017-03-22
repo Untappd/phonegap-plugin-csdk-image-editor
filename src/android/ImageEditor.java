@@ -46,6 +46,7 @@ import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import android.media.MediaScannerConnection;
 
 import com.adobe.creativesdk.aviary.AdobeImageIntent;
 import com.adobe.creativesdk.aviary.internal.filters.ToolLoaderFactory;
@@ -158,10 +159,7 @@ public class ImageEditor extends CordovaPlugin {
             callbackContext.sendPluginResult(r);
         } else if (action.equals("deleteMedia")) {
             String imageStr = args.getString(0);
-            Uri imageUri = Uri.parse(imageStr);
-            File imageFile = new File(imageUri.getPath());
-            this.deleteMedia(imageFile);
-            
+            this.deleteMedia(imageStr);
             PluginResult r = new PluginResult(PluginResult.Status.NO_RESULT);
             r.setKeepCallback(true);
             callbackContext.sendPluginResult(r);
@@ -414,16 +412,23 @@ public class ImageEditor extends CordovaPlugin {
      * making it available in the Android Gallery application and to other apps.
      *
      */
-    private void deleteMedia(File filePath) {
+    private void deleteMedia(String filePath) {
         try {
-            cordova.getActivity().getContentResolver().delete(Uri.fromFile(filePath), null, null);
+            File file = new File(filePath);
+            if(file.exists()) {
+                Log.e("SaveImage", filePath + " exists");
+            } else {
+                Log.e("SaveImage", filePath + " NOT exists");
+            }
             Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+            Uri contentUri = Uri.fromFile(file);
+            mediaScanIntent.setData(contentUri);
             cordova.getActivity().sendBroadcast(mediaScanIntent);
             this.callbackContext.success("true");
         } catch (Exception ex) {
+            Log.e("SaveImage", ex.getMessage());
             this.callbackContext.error(ex.getMessage());
         }
-
     }
 
     /**
