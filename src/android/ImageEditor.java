@@ -184,22 +184,27 @@ public class ImageEditor extends CordovaPlugin {
                 case 1:
                     Uri editedImageUri = intent.getParcelableExtra(AdobeImageIntent.EXTRA_OUTPUT_URI);
 
-                    // check if the image has actually changed
-                    Bundle extra = intent.getExtras();
-                    if (extra != null) {
-                        if (this.shouldSavePhoto)  {
-                            try {
-                                this.saveImageToGallery(editedImageUri.toString());
-                            } catch (JSONException ex) {
-                                Log.e(LOG_TAG, ex.getMessage());
+                    if (editedImageUri != null) {
+                        // check if the image has actually changed
+                        Bundle extra = intent.getExtras();
+                        if (extra != null) {
+                            if (this.shouldSavePhoto)  {
+                                try {
+                                    this.saveImageToGallery(editedImageUri.toString());
+                                } catch (JSONException ex) {
+                                    Log.e(LOG_TAG, ex.getMessage());
+                                }
                             }
                         }
+
+                        Log.e(LOG_TAG, editedImageUri.toString());
+
+                        this.callbackContext.success(editedImageUri.toString());
+                    } else {
+                        Log.e(LOG_TAG, "editedImageUri is null");
+                        this.callbackContext.error("Unable to to get save Image.");
                     }
-
-                    Log.e(LOG_TAG, editedImageUri.toString());
-
-                    this.callbackContext.success(editedImageUri.toString());
-
+                   
                     break;
             }
         } else if (resultCode == Activity.RESULT_CANCELED) {
